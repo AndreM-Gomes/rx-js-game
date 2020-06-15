@@ -1,0 +1,21 @@
+{
+  "name": "rx-js-game",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "André Monteiro Gomes",
+  "license": "MIT",
+  "scripts": {
+    "build": "yarn run tsc --watch",
+    "serve": "watchify src/index.ts -p [ tsify esmify ] -o bundle.js"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.1",
+    "typescript": "^3.3.3333"
+  },
+  "dependencies": {
+    "@reactivex/rxjs": "^6.5.5",
+    "rxjs": "^6.5.5",
+    "tsify": "^4.0.2",
+    "watchify": "^3.11.1"
+  }
+}
