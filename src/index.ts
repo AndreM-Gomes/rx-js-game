@@ -11,21 +11,17 @@ window.onload = () => {
     const ctx = canvas.getContext('2d') ;
 
     const inputEmitter$ = InputEmitter(canvas)
-    inputEmitter$.subscribe( ev => {
-        gameState$.receiveEvent(ev)
-    })
     const gameState$ = StateEmitter(ctx)
+    inputEmitter$.subscribe(gameState$.receiveEvent)
     const renderer = Renderer(ctx, 60,gameState$.subject);
+    const rect = new Rectangle(ctx,15,15,45,40,'blue','main')
+
+    rect.getEmitter().subscribe(gameState$.receiveEvent)
+    
     gameState$.receiveEvent({
         id: 'main',
-        payload: new Rectangle(ctx,15,15,45,40,'blue','rect'),
+        payload: rect,
         type: EventType.addRectangle
     })
-    gameState$.receiveEvent({
-        id: 'rects',
-        payload: null,
-        type: EventType.deleteRectangle
-    })
-
     renderer.run();
 };

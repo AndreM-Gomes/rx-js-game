@@ -4632,7 +4632,10 @@ var EventType;
     EventType[EventType["startMoveRectangleLeft"] = 3] = "startMoveRectangleLeft";
     EventType[EventType["stopMoveRectangleRight"] = 4] = "stopMoveRectangleRight";
     EventType[EventType["stopMoveRectangleLeft"] = 5] = "stopMoveRectangleLeft";
-    EventType[EventType["wallColision"] = 6] = "wallColision";
+    EventType[EventType["collisionRight"] = 6] = "collisionRight";
+    EventType[EventType["collisionLeft"] = 7] = "collisionLeft";
+    EventType[EventType["freeRight"] = 8] = "freeRight";
+    EventType[EventType["freeLeft"] = 9] = "freeLeft";
 })(EventType = exports.EventType || (exports.EventType = {}));
 
 },{}],103:[function(require,module,exports){
@@ -4680,10 +4683,34 @@ function StateEmitter(ctx) {
                 drawable.movingLeft = false;
             }
         }
+        subject.next(drawables);
+    };
+    const collision = (event) => {
+        const drawable = drawables.get(`${event.id}`);
+        if (drawable) {
+            if (event.type === EventType_1.EventType.collisionRight) {
+                drawable.rightBlocked = true;
+            }
+            if (event.type === EventType_1.EventType.collisionLeft) {
+                drawable.leftBlocked = true;
+            }
+        }
+        subject.next(drawables);
+    };
+    const free = (event) => {
+        const drawable = drawables.get(`${event.id}`);
+        if (drawable) {
+            if (event.type === EventType_1.EventType.freeLeft) {
+                drawable.leftBlocked = false;
+            }
+            if (event.type === EventType_1.EventType.freeRight) {
+                drawable.rightBlocked = false;
+            }
+        }
     };
     const receiveEvent = (event) => {
         console.log(event);
-        const eventHandlers = [deleteRectangle, addRectangle, moveRectangle];
+        const eventHandlers = [deleteRectangle, addRectangle, moveRectangle, collision, free];
         eventHandlers.forEach(handler => handler(event));
     };
     return { receiveEvent, subject };
@@ -4749,6 +4776,7 @@ exports.InputEmitter = InputEmitter;
 },{"./EventType":102,"rxjs":1}],105:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const EventType_1 = require("./EventType");
 const rxjs_1 = require("rxjs");
 class Rectangle {
     constructor(ctx, x, y, width, height, color, id) {
@@ -4761,14 +4789,52 @@ class Rectangle {
         this.id = id;
         this.movingRight = false;
         this.movingLeft = false;
+        this.rightBlocked = false;
+        this.leftBlocked = false;
+        this.falling = true;
         this.subject = new rxjs_1.Subject();
+        console.log(this);
     }
     animate() {
-        if (this.movingRight) {
+        if (this.movingRight && !this.rightBlocked) {
             this.x = this.x + 10;
         }
-        if (this.movingLeft) {
+        if (this.movingLeft && !this.leftBlocked) {
             this.x = this.x - 10;
+        }
+        if ((this.x + this.width) >= 600) {
+            this.subject.next({
+                id: `${this.id}`,
+                payload: null,
+                type: EventType_1.EventType.collisionRight
+            });
+        }
+        else {
+            this.subject.next({
+                id: `${this.id}`,
+                payload: null,
+                type: EventType_1.EventType.freeRight
+            });
+        }
+        if (this.x <= 0) {
+            this.subject.next({
+                id: `${this.id}`,
+                payload: null,
+                type: EventType_1.EventType.collisionLeft
+            });
+        }
+        else {
+            this.subject.next({
+                id: `${this.id}`,
+                payload: null,
+                type: EventType_1.EventType.freeLeft
+            });
+        }
+        if (this.y >= 100) {
+            this.falling = false;
+        }
+        if (this.falling) {
+            this.y = this.y + this.y * 0.01;
         }
     }
     draw() {
@@ -4777,13 +4843,15 @@ class Rectangle {
         this.ctx.fillRect(this.x, this.y, this.width, this.height);
     }
     getEmitter() {
-        return this.subject.asObservable;
+        return this.subject.asObservable();
     }
 }
 exports.Rectangle = Rectangle;
+function handleColision() {
+}
 //TODO: CREATE OBJECT TO HANDLE USER INPUTS
 
-},{"rxjs":1}],106:[function(require,module,exports){
+},{"./EventType":102,"rxjs":1}],106:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function Renderer(ctx, fpsLockedIn, $drawables) {
@@ -4826,20 +4894,15 @@ window.onload = () => {
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const inputEmitter$ = InputEmitter_1.InputEmitter(canvas);
-    inputEmitter$.subscribe(ev => {
-        gameState$.receiveEvent(ev);
-    });
     const gameState$ = GameState_1.StateEmitter(ctx);
+    inputEmitter$.subscribe(gameState$.receiveEvent);
     const renderer = Renderer_1.Renderer(ctx, 60, gameState$.subject);
+    const rect = new Rectangle_1.Rectangle(ctx, 15, 15, 45, 40, 'blue', 'main');
+    rect.getEmitter().subscribe(gameState$.receiveEvent);
     gameState$.receiveEvent({
         id: 'main',
-        payload: new Rectangle_1.Rectangle(ctx, 15, 15, 45, 40, 'blue', 'rect'),
+        payload: rect,
         type: EventType_1.EventType.addRectangle
-    });
-    gameState$.receiveEvent({
-        id: 'rects',
-        payload: null,
-        type: EventType_1.EventType.deleteRectangle
     });
     renderer.run();
 };

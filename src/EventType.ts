@@ -5,5 +5,8 @@ export enum EventType{
   startMoveRectangleLeft,
   stopMoveRectangleRight,
   stopMoveRectangleLeft,
-  wallColision
+  collisionRight,
+  collisionLeft,
+  freeRight,
+  freeLeft
 }

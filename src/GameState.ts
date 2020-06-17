@@ -4,6 +4,7 @@ import { GameEvent } from './GameEvent';
 import { Drawable } from './Drawable';
 import { Subject } from 'rxjs';
 import { Rectangle } from './Rectangle';
+
 export function StateEmitter(ctx){
   const subject = new Subject<Map<string, Rectangle>>()
   const drawables = new Map<string, Rectangle>()
@@ -45,10 +46,35 @@ export function StateEmitter(ctx){
         drawable.movingLeft = false
       }
     }
+    subject.next(drawables)
+  }
+  const collision = (event: GameEvent) => {
+    const drawable = drawables.get(`${event.id}`)
+    if(drawable){
+      if(event.type === EventType.collisionRight){
+        drawable.rightBlocked = true
+      }
+      if(event.type === EventType.collisionLeft){
+        drawable.leftBlocked = true
+      }
+    }
+    
+    subject.next(drawables)
+  }
+  const free = (event: GameEvent) => {
+    const drawable = drawables.get(`${event.id}`)
+    if(drawable){
+      if(event.type === EventType.freeLeft){
+        drawable.leftBlocked = false
+      }
+      if(event.type === EventType.freeRight){
+        drawable.rightBlocked = false
+      }
+    }
   }
   const receiveEvent = (event: GameEvent) => {
     console.log(event)
-    const eventHandlers = [deleteRectangle,addRectangle, moveRectangle]
+    const eventHandlers = [deleteRectangle,addRectangle, moveRectangle,collision,free]
     
     eventHandlers.forEach( handler => handler(event) )
   }
